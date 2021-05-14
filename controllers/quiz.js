@@ -1,8 +1,25 @@
 const Sequelize = require("sequelize");
 const {models} = require("../models");
 
+// Autoload quiz associated with :quizId
+exports.load = (req, res, next, quizId) => {
+
+    models.Quiz.findByPk(quizId)
+    .then(quiz => {
+        if (quiz) {
+            req.load = {...req.load, quiz};
+            next();
+        } else {
+            throw new Error('There is no quiz with id=' + quizId);
+        }
+    })
+    .catch(error => next(error));
+};
+
+
 // GET /quizzes
 exports.index = (req, res, next) => {
+    
     models.Quiz.findAll()
     .then(quizzes => {
         res.render('quizzes/index', {quizzes});
@@ -10,21 +27,14 @@ exports.index = (req, res, next) => {
     .catch(error => next(error));
 };
 
+
 // GET /quizzes/:quizId
 exports.show = (req, res, next) => {
 
-    const quizId = Number(req.params.quizId);
-
-    models.Quiz.findByPk(quizId)
-    .then(quiz => {
-        if (!quiz) {
-            throw new Error('There is no quiz with id=' + quizId);
-        }
-
-        res.render('quizzes/show', {quiz});
-    })
-    .catch(error => next(error));
+    const {quiz} = req.load;
+    res.render('quizzes/show', {quiz});
 };
+
 
 // GET /quizzes/new
 exports.new = (req, res, next) => {
@@ -36,6 +46,7 @@ exports.new = (req, res, next) => {
 
     res.render('quizzes/new', {quiz});
 };
+
 
 // POST /quizzes/create
 exports.create = (req, res, next) => {
@@ -58,43 +69,30 @@ exports.create = (req, res, next) => {
     .catch(error => next(error));
 };
 
+
 // GET /quizzes/:quizId/edit
 exports.edit = (req, res, next) => {
 
-    const quizId = Number(req.params.quizId);
-
-    models.Quiz.findByPk(quizId)
-    .then(quiz => {
-        if (quiz) {
-            res.render('quizzes/edit', {quiz});
-        } else {
-            throw new Error('There is no quiz with id=' + quizId);
-        }
-    })
-    .catch(error => next(error));
+    const {quiz} = req.load;
+    res.render('quizzes/edit', {quiz});
 };
+
 
 // PUT /quizzes/:quizId
 exports.update = (req, res, next) => {
 
-    const quizId = Number(req.params.quizId);
+    const {body} = req;
+    const {quiz} = req.load;
 
-    models.Quiz.findByPk(quizId)
-    .then(quiz => {
-        if (!quiz) {
-            throw new Error('There is no quiz with id=' + quizId);
-        }
+    quiz.question = body.question;
+    quiz.answer = body.answer;
 
-        quiz.question = req.body.question;
-        quiz.answer = req.body.answer;
-
-        return quiz.save({fields: ["question", "answer"]})
-        .then(quiz => res.redirect('/quizzes/' + quiz.id))
-        .catch(Sequelize.ValidationError, error => {
-            console.log('There are errors in the form:');
-            error.errors.forEach(({message}) => console.log(message));
-            res.render('quizzes/edit', {quiz});
-        });
+    quiz.save({fields: ["question", "answer"]})
+    .then(quiz => res.redirect('/quizzes/' + quiz.id))
+    .catch(Sequelize.ValidationError, error => {
+        console.log('There are errors in the form:');
+        error.errors.forEach(({message}) => console.log(message));
+        res.render('quizzes/edit', {quiz});
     })
     .catch(error => next(error));
 };
@@ -102,17 +100,8 @@ exports.update = (req, res, next) => {
 
 // DELETE /quizzes/:quizId
 exports.destroy = (req, res, next) => {
-
-    const quizId = Number(req.params.quizId);
-
-    models.Quiz.findByPk(quizId)
-    .then(quiz => {
-        if (!quiz) {
-            throw new Error('There is no quiz with id=' + quizId);
-        }
-
-        return quiz.destroy()
-    })
+    
+    req.load.quiz.destroy()
     .then(() => res.redirect('/quizzes'))
     .catch(error => next(error));
 };
@@ -120,45 +109,31 @@ exports.destroy = (req, res, next) => {
 
 // GET /quizzes/:quizId/play
 exports.play = (req, res, next) => {
+    
+    const {query} = req;
+    const {quiz} = req.load;
 
-    const quizId = Number(req.params.quizId);
+    const answer = query.answer || '';
 
-    models.Quiz.findByPk(quizId)
-    .then(quiz => {
-        if (!quiz) {
-            throw new Error('There is no quiz with id=' + quizId);
-        }
-
-        const answer = req.query.answer || '';
-
-        res.render('quizzes/play', {
-            quiz,
-            answer
-        });
-    })
-    .catch(error => next(error));
+    res.render('quizzes/play', {
+        quiz,
+        answer
+    });
 };
 
 
 // GET /quizzes/:quizId/check
 exports.check = (req, res, next) => {
 
-    const quizId = Number(req.params.quizId);
+    const {query} = req;
+    const {quiz} = req.load;
 
-    models.Quiz.findByPk(quizId)
-    .then(quiz => {
-        if (!quiz) {
-            throw new Error('There is no quiz with id=' + quizId);
-        }
+    const answer = query.answer || "";
+    const result = answer.toLowerCase().trim() === quiz.answer.toLowerCase().trim();
 
-        const answer = req.query.answer || "";
-        const result = answer.toLowerCase().trim() === quiz.answer.toLowerCase().trim();
-
-        res.render('quizzes/result', {
-            quiz,
-            result,
-            answer
-        })
-    })
-    .catch(error => next(error));
+    res.render('quizzes/result', {
+        quiz,
+        result,
+        answer
+    });
 };
