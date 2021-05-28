@@ -66,6 +66,10 @@ a.button:hover {
   background: lightgray;
 }
 
+.right {
+  float: right;
+}
+
 .wideRow {
   display: flex;
   flex-flow: row wrap;

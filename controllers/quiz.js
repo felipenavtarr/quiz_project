@@ -1,4 +1,5 @@
 const Sequelize = require("sequelize");
+const Op = Sequelize.Op;
 const {models} = require("../models");
 const paginate = require('../helpers/paginate').paginate;
 
@@ -22,8 +23,20 @@ exports.load = async (req, res, next, quizId) => {
 // GET /quizzes
 exports.index = async (req, res, next) => {
     
+    let countOptions = {}; // for all quizzes in db matching search pattern
+    let findOptions = {}; // quizzes corresponding to current page, of all of the previous
+
+    // Search:
+    const search = req.query.search || '';
+    if (search) {
+        const search_like = "%" + search.replace(/ +/g,"%") + "%"; // search string for sequelize
+
+        countOptions.where = {question: { [Op.like]: search_like }};
+        findOptions.where = {question: { [Op.like]: search_like }};
+    }
+
     try {
-        const count = await models.Quiz.count();
+        const count = await models.Quiz.count(countOptions);
 
         // Pagination:
         const items_per_page = 10;
@@ -35,13 +48,15 @@ exports.index = async (req, res, next) => {
         // This String is added to a local variable of res, which is used into the application layout file.
         res.locals.paginate_control = paginate(count, items_per_page, pageno, req.url);
 
-        const findOptions = {
-            offset: items_per_page * (pageno - 1),
-            limit: items_per_page
-        };
+        findOptions.offset = items_per_page * (pageno - 1);
+        findOptions.limit = items_per_page;
 
         const quizzes = await models.Quiz.findAll(findOptions);
-        res.render('quizzes/index', {quizzes});
+        res.render('quizzes/index', {
+            quizzes,
+            search
+        });
+    
     } catch(error) {
         next(error);
     }
