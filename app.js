@@ -4,7 +4,9 @@ var path = require('path');
 var favicon = require('serve-favicon');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var session = require('express-session');
 var partials = require('express-partials');
+var flash = require('express-flash');
 var methodOverride = require('method-override');
 
 var indexRouter = require('./routes/index');
@@ -20,9 +22,15 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+// Session config for storage in Redis db
+app.use(session({
+  secret: "Project Quiz",
+  resave: false,
+  saveUninitialized: true}));
 app.use(methodOverride('_method', {methods: ["POST", "GET"]}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(partials());
+app.use(flash());
 
 app.use('/', indexRouter);
 
