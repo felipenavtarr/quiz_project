@@ -5,6 +5,7 @@ var favicon = require('serve-favicon');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var session = require('express-session');
+var SequelizeStore = require('connect-session-sequelize')(session.Store);
 var partials = require('express-partials');
 var flash = require('express-flash');
 var methodOverride = require('method-override');
@@ -22,11 +23,20 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-// Session config for storage in Redis db
+// Session config for storage in db using Sequelize
+var sequelize = require("./models");
+var sessionStore = new SequelizeStore({
+  db: sequelize,
+  table: "Session",
+  checkExpirationInterval: 15*60*1000, // The interval at which to cleanup expired sessions in milliseconds. (15 minutes)
+  expiration: 4*60*60*1000 // The maximum age (in milliseconds) of a valid session. (4 hours)
+});
 app.use(session({
   secret: "Project Quiz",
+  store: sessionStore,
   resave: false,
-  saveUninitialized: true}));
+  saveUninitialized: true
+}));
 app.use(methodOverride('_method', {methods: ["POST", "GET"]}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(partials());
