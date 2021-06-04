@@ -3,6 +3,36 @@ var router = express.Router();
 
 const quizController = require('../controllers/quiz');
 
+// -------------------- History: restoration routes ---------------------
+
+// Redirection to the saved restoration route.
+function redirectBack(req, res, next) {
+  const url = req.session.backURL || "/";
+  delete req.session.backURL;
+  res.redirect(url);
+}
+
+router.get('/goback', redirectBack);
+
+// Save the route that will be the current restoration route
+function saveBack(req, res, next) {
+  req.session.backURL = req.url;
+  next();
+}
+
+// Restoration routes are GET route that do not end in:
+// /new, /edit, /play, /check, /:id
+router.get(
+  [
+    '/',
+    '/author',
+    '/quizzes'
+  ],
+  saveBack
+);
+
+// -------------------- end restoration routes --------------------------
+
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index');
