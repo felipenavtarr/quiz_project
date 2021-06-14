@@ -3,6 +3,24 @@ var router = express.Router();
 
 const quizController = require('../controllers/quiz');
 const userController = require('../controllers/user');
+const sessionController = require('../controllers/session');
+
+
+// ---------------------- Routes for /login resource -----------------------
+// autologout
+router.all('*', sessionController.checkLoginExpires);
+
+// login form
+router.get('/login', sessionController.new);
+
+// create login session
+router.post('/login',
+  sessionController.create,
+  sessionController.createLoginExpires);
+
+// logout
+router.delete('/login', sessionController.destroy);
+// ----------------------- end /login resource --------------------------
 
 // -------------------- History: restoration routes ---------------------
 
@@ -22,7 +40,7 @@ function saveBack(req, res, next) {
 }
 
 // Restoration routes are GET route that do not end in:
-// /new, /edit, /play, /check, /:id
+// /new, /edit, /play, /check, /login or /:id
 router.get(
   [
     '/',
@@ -45,7 +63,7 @@ router.get('/author', (req, res, next) => {
   res.render('author');
 });
 
-// Autoload for routes using :quizId
+// Autoload for routes using :quizId or :userId
 router.param('quizId', quizController.load);
 router.param('userId', userController.load);
 
