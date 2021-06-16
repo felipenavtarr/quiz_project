@@ -86,6 +86,12 @@ a.button:hover {
   margin: 0px 5px;
 }
 
+.loginicon {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+}
+
 #flashinfo {
   width: auto;
   border: 2px solid blue;
