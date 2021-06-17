@@ -8,6 +8,11 @@ var app = require('../app');
 var debug = require('debug')('quiz-project:server');
 var http = require('http');
 
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
 /**
  * Get port from environment and store in Express.
  */
@@ -26,8 +31,39 @@ var server = http.createServer(app);
  */
 
 server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
+server.on('error', onError.bind(undefined, port));
+server.on('listening', onListening.bind(undefined, server));
+
+/**
+ * ======================================================================
+ * Creates HTTPS server if certificate files exist.
+ * ======================================================================
+ */
+try {
+  const options = {
+    key: fs.readFileSync("/etc/certificates/llave.pem"),
+    cert: fs.readFileSync("/etc/certificates/certificado.pem"),
+    ca: fs.readFileSync("/etc/certificates/cadDigiCertCA.pem")
+  };
+
+  var sport = normalizePort(process.env.SPORT || '3443');
+  app.set('sport', sport);
+
+  // Create HTTPS server.
+  const secureServer = https.createServer(options, app);
+
+  secureServer.listen(sport);
+
+  secureServer.on('error', onError.bind(undefined, sport));
+  secureServer.on('listening', onListening.bind(undefined, secureServer));
+
+} catch (err) {
+  if (err.code === 'ENOENT') {
+    debug("There are no SSL certificate files. No HTTPS Server created.");
+  } else {
+    debug(`ERROR: ${err.message || err}.`);
+  }
+}
 
 /**
  * Normalize a port into a number, string, or false.
@@ -53,7 +89,7 @@ function normalizePort(val) {
  * Event listener for HTTP server "error" event.
  */
 
-function onError(error) {
+function onError(port, error) {
   if (error.syscall !== 'listen') {
     throw error;
   }
@@ -81,10 +117,10 @@ function onError(error) {
  * Event listener for HTTP server "listening" event.
  */
 
-function onListening() {
+function onListening(server) {
   var addr = server.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+  debug('HTTP Express server listening on ' + bind);
 }
